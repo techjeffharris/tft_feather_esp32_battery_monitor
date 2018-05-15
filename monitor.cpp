@@ -100,7 +100,7 @@ bool PbMonitor::setupWifi() {
   // read file /wifi.cfg:
   // |ssid
   // |psk
-  wifi_info = readFile(SD, "/wifi.cfg");
+  wifi_info = readFile(SD, WIFI_CONF_FILENAME);
 
   Serial.println("wifi_info: " + wifi_info);
 
@@ -143,11 +143,24 @@ bool PbMonitor::setupWifi() {
 
 void PbMonitor::checkForWiFiClient() {
 
-  const int PIN = 13;
+  bool increment = true;
+
+  int numRequests = 0;
+  String fileInfo_str;
 
   WiFiClient client = _server.available();   // listen for incoming clients
 
   if (client) {                             // if you get a client,
+
+    fileInfo_str = readFile(SD, WIFI_REQUEST_TOTAL_FILENAME);
+
+    // read the client count from file and convert to int
+    numRequests = fileInfo_str.toInt();
+
+    // debug output
+    Serial.printf("Previous all-time total clients: %i\n", numRequests);
+
+
     Serial.println("New Client.");           // print a message out the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
@@ -166,8 +179,7 @@ void PbMonitor::checkForWiFiClient() {
             client.println();
 
             // the content of the HTTP response follows the header:
-            client.printf("Click <a href=\"/H\">here</a> to turn the LED on pin %i on.<br>\n", PIN);
-            client.printf("Click <a href=\"/L\">here</a> to turn the LED on pin %i off.<br>", PIN);
+            client.printf("All-time total HTTP Requests: %i\n", numRequests+1);
 
             // The HTTP response ends with another blank line:
             client.println();
@@ -181,14 +193,30 @@ void PbMonitor::checkForWiFiClient() {
         }
 
         // Check to see if the client request was "GET /H" or "GET /L":
-        if (currentLine.endsWith("GET /H")) {
-          digitalWrite(PIN, HIGH);               // GET /H turns the LED on
-        }
-        if (currentLine.endsWith("GET /L")) {
-          digitalWrite(PIN, LOW);                // GET /L turns the LED off
+        if (currentLine.endsWith("GET /favicon.ico")) {
+          increment = false;
+
         }
       }
     }
+
+    if (increment) {
+
+      numRequests++;
+
+      fileInfo_str = (String) numRequests;
+
+      const char * updatedCount_str = fileInfo_str.c_str();
+
+      Serial.printf("All-time total clients: %s\n", updatedCount_str);
+
+      deleteFile(SD, WIFI_REQUEST_TOTAL_FILENAME);
+
+      // write the pre-incremented client count converted to strintg to the file
+      writeFile(SD, WIFI_REQUEST_TOTAL_FILENAME, updatedCount_str);
+    }
+
+    
     // close the connection:
     client.stop();
     Serial.println("Client Disconnected.");

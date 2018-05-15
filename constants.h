@@ -44,6 +44,8 @@
 
 
 #define BMP_FILENAME "/Phoenix-Rising-art.bmp"
+#define WIFI_CONF_FILENAME "/wifi.cfg"
+#define WIFI_REQUEST_TOTAL_FILENAME "/wifi_count"
 #define BUFFPIXEL 40
 
 const String ERR_SETUP_TFT = "Couldn't start touchscreen controller";
