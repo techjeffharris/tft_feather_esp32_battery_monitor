@@ -16,9 +16,9 @@ class Ammeter
 {
   public:
     Ammeter() 
-      : _sleep(SLEEP_MODE),
+      : _pin(AMMETER_PIN),
+        _sleep(SLEEP_MODE),
         _snapmulti(SNAPMULTI),
-        _pin(AMMETER_PIN),
         _meter(_pin, _sleep, _snapmulti)
     {};
     float getThreshold();

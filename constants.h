@@ -13,7 +13,7 @@
 #endif
 #ifdef ESP32
    #define STMPE_CS 32
-   #define TFT_CS   15
+   #define TFT_CS   21
    #define TFT_DC   33
    #define SD_CS    14
 #endif
@@ -46,6 +46,8 @@
 #define BMP_FILENAME "/Phoenix-Rising-art.bmp"
 #define BUFFPIXEL 40
 
+const String ERR_SETUP_TFT = "Couldn't start touchscreen controller";
+
 // UNCLEAR whether we'll use rotation; need to fix UI::bmpDraw()...
 // 0 is portrait
 // 1,2,3 I can't remember... 
@@ -73,19 +75,10 @@ const int BAT_PEUKERT   = 1.3;
 const float ACT_THRESH  = 4.0;
 const bool  SLEEP_MODE  = false;
 const float SNAPMULTI   = 0.01; // DEFAULT: 0.01 - so smoot
-const int   AMMETER_PIN = A1;
-const int VOLTMETER_PIN = A0;
+const int   AMMETER_PIN = A3;
+const int VOLTMETER_PIN = A4;
 
 const int VCC = 5000;
-
-const int COLS  = 16;
-const int ROWS  = 2;
-const int RS    = 2;
-const int EN    = 3;
-const int D4    = 4;
-const int D5    = 5;
-const int D6    = 6;
-const int D7    = 7;
 
 const int   R1          = 40; // 40k
 const int   R2          = 10; // 10k

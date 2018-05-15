@@ -37,5 +37,6 @@ void setup() {
 void loop(void) {
 
   monitor.checkForTouch();
+  monitor.checkForWiFiClient();
   
 }

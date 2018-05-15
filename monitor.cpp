@@ -1,38 +1,73 @@
-
+/*
+  monitor.cpp - Library for Power Consumption Monitor
+  Created by Jeff A. Harris May 4, 2018
+  Released into the public domain.
+*/
 #include "monitor.h"
 #include <WiFi.h>
 
 bool PbMonitor::begin() {
 
-  // initialize the SD card
-  Serial.print("Initializing SD card...");
-  if (! SD.begin(SD_CS)) {
-  Serial.println("failed!");
-  return false;
-  } else {
-  // display SD Card information
-  cardInfo();
-
-  setupDisplay();  
-
-  // Initilize WiFi
+  setupSD();
+  setupTFT();
+  setupTS();
   setupWifi();
 
   // setup the display and load background image
 
   Serial.println("PbMonitor has begun.");
   return true;
-  }
-
-
   
 }
 
 
+bool PbMonitor::setupSD() {
+  // initialize the SD card
+  Serial.print("Initializing SD card...");
 
-bool PbMonitor::setupDisplay() {
+  if (! SD.begin(SD_CS)) {
+    Serial.println("failed!");
+    return false;
+  } else {
+    Serial.println("success!");
+    // display SD Card information
+    cardInfo();
+    return true;
+  }
+
+}
+
+
+void PbMonitor::setupTFT() {
+
   Serial.println("HX8357D Featherwing Initializing..."); 
+
+  _tft.begin();
+
+  Serial.printf("width: %i\nheight: %i\n", _tft.width(), _tft.height());
+
+  if (TFT_ROTATION) {
+    _tft.setRotation(TFT_ROTATION);
+
+    Serial.printf("width: %i\nheight: %i\n", _tft.width(), _tft.height());
+  }
+
+  _tft.fillScreen(HX8357_WHITE);
+  setBackgroundImage(BMP_FILENAME, 0, 0);
+  _tft.setAddrWindow(0,0,0,0);
+
+  // _tft.setCursor(240,170);
+  // _tft.setTextColor(HX8357_BLUE, HX8357_WHITE);
+  // _tft.setTextSize(3);
+  // _tft.print("foo");
+ 
+  // select the current color 'red'
+  // _currentcolor = HX8357_RED;
   
+}
+
+void PbMonitor::setupTS() {
+
   if (!_ts.begin()) {
     Serial.println("Couldn't start touchscreen controller");
     while (1);
@@ -40,54 +75,31 @@ bool PbMonitor::setupDisplay() {
 
   Serial.println("Touchscreen started");
 
+  if (TS_BUTTON_GRID) {
+    showGrid();
+  }
+
   // Uncomment these lines to turn off the backlite via STMPE!
   //_ts.writeRegister8(STMPE_GPIO_DIR, 1<<2);
   //_ts.writeRegister8(STMPE_GPIO_ALT_FUNCT, 1<<2);
   //_ts.writeRegister8(STMPE_GPIO_CLR_PIN, 1<<2);
-  
-  _tft.begin();
-
-  width = _tft.width();
-  height = _tft.height();
-
-  Serial.printf("width: %i\nheight: %i\n", width, height);
-
-  _tft.setRotation(TFT_ROTATION);
-
-  width = _tft.width();
-  height = _tft.height();
-
-  Serial.printf("width: %i\nheight: %i\n", width, height);
-
-  _tft.fillScreen(HX8357_WHITE);
-  setBackgroundImage(BMP_FILENAME, 0, 0);
-
-  // _tft.setCursor(240,170);
-  // _tft.setTextColor(HX8357_BLUE, HX8357_WHITE);
-  // _tft.setTextSize(3);
-  // _tft.print("foo");
-
-  if (TS_BUTTON_GRID) {
-    showGrid();
-  }
- 
-  // select the current color 'red'
-  // currentcolor = HX8357_RED;
 
   // turn backlite on via STMPE
   //_ts.writeRegister8(STMPE_GPIO_SET_PIN, 1<<2);
   //
-  
-  return true;
+
 }
 
 bool PbMonitor::setupWifi() {
 
   String ssid, psk, wifi_info;
 
+  char ssid_buf[32];
+  char psk_buf[64];
+
   // read file /wifi.cfg:
-  // | ssid
-  // | psk
+  // |ssid
+  // |psk
   wifi_info = readFile(SD, "/wifi.cfg");
 
   Serial.println("wifi_info: " + wifi_info);
@@ -98,9 +110,7 @@ bool PbMonitor::setupWifi() {
 
   ssid = wifi_info.substring(0, nlpos);
   psk = wifi_info.substring(nlpos+1);
-
-  char ssid_buf[32];
-  char psk_buf[64];
+  
 
   ssid.toCharArray(ssid_buf, 32);
   psk.toCharArray(psk_buf, 64);
@@ -108,6 +118,7 @@ bool PbMonitor::setupWifi() {
   // parse file for ssid and psk
   const char* ssid_ptr = ssid_buf;
   const char* psk_ptr = psk_buf;
+
 
   Serial.println("ssid: " + ssid + "\t psk: " + psk);
 
@@ -124,11 +135,65 @@ bool PbMonitor::setupWifi() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   
-  // _server.begin();
+  _server.begin();
 
   return true;
 
 };
+
+void PbMonitor::checkForWiFiClient() {
+
+  const int PIN = 13;
+
+  WiFiClient client = _server.available();   // listen for incoming clients
+
+  if (client) {                             // if you get a client,
+    Serial.println("New Client.");           // print a message out the serial port
+    String currentLine = "";                // make a String to hold incoming data from the client
+    while (client.connected()) {            // loop while the client's connected
+      if (client.available()) {             // if there's bytes to read from the client,
+        char c = client.read();             // read a byte, then
+        Serial.write(c);                    // print it out the serial monitor
+        if (c == '\n') {                    // if the byte is a newline character
+
+          // if the current line is blank, you got two newline characters in a row.
+          // that's the end of the client HTTP request, so send a response:
+          if (currentLine.length() == 0) {
+            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+            // and a content-type so the client knows what's coming, then a blank line:
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println();
+
+            // the content of the HTTP response follows the header:
+            client.printf("Click <a href=\"/H\">here</a> to turn the LED on pin %i on.<br>\n", PIN);
+            client.printf("Click <a href=\"/L\">here</a> to turn the LED on pin %i off.<br>", PIN);
+
+            // The HTTP response ends with another blank line:
+            client.println();
+            // break out of the while loop:
+            break;
+          } else {    // if you got a newline, then clear currentLine:
+            currentLine = "";
+          }
+        } else if (c != '\r') {  // if you got anything else but a carriage return character,
+          currentLine += c;      // add it to the end of the currentLine
+        }
+
+        // Check to see if the client request was "GET /H" or "GET /L":
+        if (currentLine.endsWith("GET /H")) {
+          digitalWrite(PIN, HIGH);               // GET /H turns the LED on
+        }
+        if (currentLine.endsWith("GET /L")) {
+          digitalWrite(PIN, LOW);                // GET /L turns the LED off
+        }
+      }
+    }
+    // close the connection:
+    client.stop();
+    Serial.println("Client Disconnected.");
+  }
+}
 
 
 
@@ -151,26 +216,24 @@ void PbMonitor::checkForTouch() {
   tft_p.x = map(ts_p.y, TS_MINY, TS_MAXY, _tft.width(), 0);
   tft_p.y = map(ts_p.x, TS_MAXX, TS_MINX, 0, _tft.height());
 
-  if (tft_p.x != lastTouch_x || tft_p.y != lastTouch_y) {
+  box_x = tft_p.x/TS_BUTTON_SIZE;
+  box_y = tft_p.y/TS_BUTTON_SIZE;
 
-    if (!lastTouch_x && !lastTouch_y) {
+  if (tft_p.x != _lastBox_x || tft_p.y != _lastBox_y) {
 
-    }
+    _lastBox_x = tft_p.x;
+    _lastBox_y = tft_p.y;
 
-    lastTouch_x = tft_p.x;
-    lastTouch_y = tft_p.y;
-
-    // Serial.printf("tft_x: %i\t tft_y: %i\n", tft_p.x, tft_p.y);
-
-    box_x = tft_p.x/TS_BUTTON_SIZE;
-    box_y = tft_p.y/TS_BUTTON_SIZE;
 
     Serial.printf("box: %i,%i\n", box_x, box_y);
     
+    // look for a button at this box..?
+    Serial.println("is there a button here? ");
+
   }
 
 
-  // paint(tft_p.x, tft_p.y);
+  // fingerPaint(tft_p.x, tft_p.y);
 
 };
 
@@ -241,15 +304,15 @@ void PbMonitor::showGrid() {
 }
 
 
-void PbMonitor::paint(int x, int y) {
+void PbMonitor::fingerPaint(int x, int y) {
 
   if (((y-PENRADIUS) > 0) && ((y+PENRADIUS) < _tft.height())) {
-  _tft.fillCircle(x, y, PENRADIUS, currentcolor);
+  _tft.fillCircle(x, y, PENRADIUS, _currentcolor);
   }
 };
 
 
-bool PbMonitor::tstest() {
+void PbMonitor::tstest() {
   uint16_t x, y;
   uint8_t z;
   if (_ts.touched()) {

@@ -26,6 +26,8 @@ class PbMonitor
     PbMonitor() {};
     bool begin();
     void checkForTouch();
+    void checkForWiFiClient();
+
   protected:
     Ammeter           _ammeter;
     Voltmeter         _voltmeter;
@@ -33,23 +35,31 @@ class PbMonitor
     Adafruit_STMPE610 _ts = Adafruit_STMPE610(STMPE_CS);
     WiFiServer        _server = WiFiServer(HTTP_SERVER_PORT);
 
-    int currentcolor, oldcolor, lastTouch_x, lastTouch_y, height, width;
+    int _currentcolor;
+    int _oldcolor;
+    int _lastBox_x;
+    int _lastBox_y;
 
     void hideGrid();
     void showGrid();
 
-    void paint(int x, int y);
 
-    bool setupDisplay();
     bool setBackgroundImage(char *filename, uint8_t x, uint16_t y);
+    
+    bool setupSD();
+    void setupTFT();
+    void setupTS();
     bool setupWifi();
+
+    void fingerPaint(int x, int y);
 
     uint16_t read16(File &f);
     uint32_t read32(File &f);
+    
     void cardInfo();
     void sdfstest();
 
-    bool tstest ();
+    void tstest ();
 
     void listDir(fs::FS &fs, const char * dirname, uint8_t levels);
     void createDir(fs::FS &fs, const char * path);

@@ -16,9 +16,9 @@ class Voltmeter
 {
   public:
     Voltmeter() 
-      : _sleep(SLEEP_MODE),
+      : _pin(VOLTMETER_PIN),
+        _sleep(SLEEP_MODE),
         _snapmulti(SNAPMULTI),
-        _pin(VOLTMETER_PIN),
         _meter(_pin, _sleep, _snapmulti)
     {};
     
@@ -35,8 +35,8 @@ class Voltmeter
     int _r2;
 
     float _act_thresh;
-    float _snapmulti;
     float _sleep;
+    float _snapmulti;
 
     ResponsiveAnalogRead _meter;
 
