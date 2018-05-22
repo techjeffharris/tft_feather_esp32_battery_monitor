@@ -4,7 +4,6 @@
   Released into the public domain.
 */
 #include "monitor.h"
-#include <WiFi.h>
 
 bool PbMonitor::begin() {
 
@@ -102,16 +101,15 @@ bool PbMonitor::setupWifi() {
   // |psk
   wifi_info = readFile(SD, WIFI_CONF_FILENAME);
 
-  Serial.println("wifi_info: " + wifi_info);
+  Serial.printf("wifi_info: %s\n", wifi_info.c_str());
 
   int nlpos = wifi_info.indexOf("\n");
 
-  Serial.println("nlpos: " + String(nlpos));
+  Serial.printf("nlpos: %i", nlpos);
 
   ssid = wifi_info.substring(0, nlpos);
   psk = wifi_info.substring(nlpos+1);
   
-
   ssid.toCharArray(ssid_buf, 32);
   psk.toCharArray(psk_buf, 64);
 
@@ -120,26 +118,69 @@ bool PbMonitor::setupWifi() {
   const char* psk_ptr = psk_buf;
 
 
-  Serial.println("ssid: " + ssid + "\t psk: " + psk);
+  Serial.printf("ssid: %s\t psk: %s\n", ssid.c_str(), psk.c_str());
 
-  // start wifi
-  WiFi.begin(ssid_ptr, psk_ptr);
+  Serial.print("Software AP binding to IP address: ");
+  Serial.println(_apIP);
 
-  while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-  }
+  // start wifi in access point mode
+  WiFi.mode(WIFI_AP);
+  WiFi.softAPConfig(_apIP, _apIP, _apNetmask);
+  WiFi.softAP(ssid_ptr, psk_ptr);
 
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+  // this was for when the thing was in STA mode
+  // while (WiFi.status() != WL_CONNECTED) {
+  //     delay(500);
+  //     Serial.print(".");
+  // }
+
+  Serial.print("Software AP Started with IP address: ");
+  Serial.println(_apIP);
   
-  _server.begin();
+  // if DNSServer is started with "*" for domain name, it will reply with
+  // provided IP to all DNS request
+  _dnsServer.start(DNS_PORT, "*", _apIP);
+  _httpServer.begin();
 
   return true;
 
 };
+
+String responseHTML = ""
+  "<!DOCTYPE html><html><head><title>CaptivePortal</title></head><body>"
+  "<h1>Hello World!</h1><p>This is a captive portal example. All requests will "
+  "be redirected here.</p><p>for instance, <a href='www.google.com'>www.google.com</a>"
+  "will bring you back here</p></body></html>";
+
+void PbMonitor::captivePortal() {
+
+  _dnsServer.processNextRequest();
+  WiFiClient client = _httpServer.available();   // listen for incoming clients
+
+  if (client) {
+    String currentLine = "";
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+        if (c == '\n') {
+          if (currentLine.length() == 0) {
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println();
+            client.print(responseHTML);
+            break;
+          } else {
+            currentLine = "";
+          }
+        } else if (c != '\r') {
+          currentLine += c;
+        }
+      }
+    }
+    client.stop();
+  }
+
+}
 
 void PbMonitor::checkForWiFiClient() {
 
@@ -148,7 +189,7 @@ void PbMonitor::checkForWiFiClient() {
   int numRequests = 0;
   String fileInfo_str;
 
-  WiFiClient client = _server.available();   // listen for incoming clients
+  WiFiClient client = _httpServer.available();   // listen for incoming clients
 
   if (client) {                             // if you get a client,
 

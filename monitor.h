@@ -14,6 +14,7 @@
 #include <SD.h>
 #include <SPI.h>
 #include <WiFi.h>
+#include <DNSServer.h>
 
 #include "constants.h"
 #include "ammeter.h"
@@ -25,15 +26,19 @@ class PbMonitor
   public:
     PbMonitor() {};
     bool begin();
+    void captivePortal();
     void checkForTouch();
     void checkForWiFiClient();
 
   protected:
-    Ammeter           _ammeter;
-    Voltmeter         _voltmeter;
-    Adafruit_HX8357   _tft = Adafruit_HX8357(TFT_CS, TFT_DC);
-    Adafruit_STMPE610 _ts = Adafruit_STMPE610(STMPE_CS);
-    WiFiServer        _server = WiFiServer(HTTP_SERVER_PORT);
+    Ammeter             _ammeter;
+    Voltmeter           _voltmeter;
+    Adafruit_HX8357     _tft = Adafruit_HX8357(TFT_CS, TFT_DC);
+    Adafruit_STMPE610   _ts = Adafruit_STMPE610(STMPE_CS);
+    IPAddress           _apIP = IPAddress(WIFI_AP_IP_0, WIFI_AP_IP_1, WIFI_AP_IP_2, WIFI_AP_IP_3);
+    IPAddress           _apNetmask = IPAddress(WIFI_AP_NETMASK_0, WIFI_AP_NETMASK_1, WIFI_AP_NETMASK_2, WIFI_AP_NETMASK_3);
+    DNSServer           _dnsServer;
+    WiFiServer          _httpServer = WiFiServer(HTTP_SERVER_PORT);
 
     int _currentcolor;
     int _oldcolor;

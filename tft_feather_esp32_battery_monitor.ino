@@ -12,9 +12,8 @@
   * Voltage Divider
   * Digital Current Sensor
   * Temperature/Humidity sensor
-  * Realtime Clock (RTC)
-  * 8KB FRAM
-  * 16x2 Character LCD
+  * 480x320 TFT LCD
+  * Micro SD Storage
 */
 
 #include "monitor.h"
@@ -37,6 +36,6 @@ void setup() {
 void loop(void) {
 
   monitor.checkForTouch();
-  monitor.checkForWiFiClient();
+  monitor.captivePortal();
   
 }

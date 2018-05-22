@@ -44,9 +44,20 @@
 
 
 #define BMP_FILENAME "/Phoenix-Rising-art.bmp"
+#define BUFFPIXEL 40
+
 #define WIFI_CONF_FILENAME "/wifi.cfg"
 #define WIFI_REQUEST_TOTAL_FILENAME "/wifi_count"
-#define BUFFPIXEL 40
+
+#define WIFI_AP_IP_0 172
+#define WIFI_AP_IP_1 16
+#define WIFI_AP_IP_2 4
+#define WIFI_AP_IP_3 1
+
+#define WIFI_AP_NETMASK_0 255
+#define WIFI_AP_NETMASK_1 255
+#define WIFI_AP_NETMASK_2 255
+#define WIFI_AP_NETMASK_3 0
 
 const String ERR_SETUP_TFT = "Couldn't start touchscreen controller";
 
@@ -68,6 +79,8 @@ const String ERR_SETUP_TFT = "Couldn't start touchscreen controller";
 #define BOXSIZE 40
 #define PENRADIUS 3
 
+
+const byte DNS_PORT = 53;
 const int HTTP_SERVER_PORT = 80;
 
 const int BAT_RATED_HRS = 20;
