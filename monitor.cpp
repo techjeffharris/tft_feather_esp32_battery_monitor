@@ -96,6 +96,8 @@ bool PbMonitor::setupWifi() {
   char ssid_buf[32];
   char psk_buf[64];
 
+
+
   // read file /wifi.cfg:
   // |ssid
   // |psk
@@ -146,13 +148,14 @@ bool PbMonitor::setupWifi() {
 
 };
 
-String responseHTML = ""
-  "<!DOCTYPE html><html><head><title>CaptivePortal</title></head><body>"
-  "<h1>Hello World!</h1><p>This is a captive portal example. All requests will "
-  "be redirected here.</p><p>for instance, <a href='www.google.com'>www.google.com</a>"
-  "will bring you back here</p></body></html>";
 
-void PbMonitor::captivePortal() {
+void PbMonitor::serverCaptivePortal() {
+
+  String responseHTML = "";
+    "<!DOCTYPE html><html><head><title>CaptivePortal</title></head><body>"
+    "<h1>Hello World!</h1><p>This is a captive portal example. All requests will "
+    "be redirected here.</p><p>for instance, <a href='www.google.com'>www.google.com</a> "
+    "will bring you back here</p></body></html>";
 
   _dnsServer.processNextRequest();
   WiFiClient client = _httpServer.available();   // listen for incoming clients
@@ -182,32 +185,29 @@ void PbMonitor::captivePortal() {
 
 }
 
-void PbMonitor::checkForWiFiClient() {
+void PbMonitor::serveWiFiClient() {
 
-  bool increment = true;
+  bool incrementCount = true;
 
-  int numRequests = 0;
   String fileInfo_str;
 
   WiFiClient client = _httpServer.available();   // listen for incoming clients
 
   if (client) {                             // if you get a client,
 
-    fileInfo_str = readFile(SD, WIFI_REQUEST_TOTAL_FILENAME);
-
-    // read the client count from file and convert to int
-    numRequests = fileInfo_str.toInt();
-
     // debug output
-    Serial.printf("Previous all-time total clients: %i\n", numRequests);
-
+    Serial.printf("Previous all-time total clients: %i\n", _numRequests);
 
     Serial.println("New Client.");           // print a message out the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
+
     while (client.connected()) {            // loop while the client's connected
+      
       if (client.available()) {             // if there's bytes to read from the client,
+      
         char c = client.read();             // read a byte, then
         Serial.write(c);                    // print it out the serial monitor
+        
         if (c == '\n') {                    // if the byte is a newline character
 
           // if the current line is blank, you got two newline characters in a row.
@@ -220,7 +220,7 @@ void PbMonitor::checkForWiFiClient() {
             client.println();
 
             // the content of the HTTP response follows the header:
-            client.printf("All-time total HTTP Requests: %i\n", numRequests+1);
+            client.printf("All-time total HTTP Requests: %i\n", _numRequests+1);
 
             // The HTTP response ends with another blank line:
             client.println();
@@ -233,30 +233,22 @@ void PbMonitor::checkForWiFiClient() {
           currentLine += c;      // add it to the end of the currentLine
         }
 
-        // Check to see if the client request was "GET /H" or "GET /L":
-        if (currentLine.endsWith("GET /favicon.ico")) {
-          increment = false;
+        // As long as the client request was NOT "GET /favicon.ico"
+        if (!currentLine.endsWith("GET /favicon.ico")) {
+
+          // if the request was the browser asking for a favicon, then don't
+          // increment the client request counter (because pretty much all modern 
+          // browsers request a favicon for every request)
+
+          readRequestCount();
+
+          _numRequests++;
+
+          saveRequestCount();
 
         }
       }
     }
-
-    if (increment) {
-
-      numRequests++;
-
-      fileInfo_str = (String) numRequests;
-
-      const char * updatedCount_str = fileInfo_str.c_str();
-
-      Serial.printf("All-time total clients: %s\n", updatedCount_str);
-
-      deleteFile(SD, WIFI_REQUEST_TOTAL_FILENAME);
-
-      // write the pre-incremented client count converted to strintg to the file
-      writeFile(SD, WIFI_REQUEST_TOTAL_FILENAME, updatedCount_str);
-    }
-
     
     // close the connection:
     client.stop();
@@ -264,6 +256,36 @@ void PbMonitor::checkForWiFiClient() {
   }
 }
 
+void PbMonitor::readRequestCount() {
+
+  fileInfo_str = readFile(SD, WIFI_REQUEST_TOTAL_FILENAME);
+
+  // read the client count from file and convert to int
+  _numRequests = fileInfo_str.toInt();
+
+  fileInfo_str = (String) _numRequests;
+
+  const char * updatedCount_str = fileInfo_str.c_str();
+
+  Serial.printf("All-time total requests: %s\n", updatedCount_str);
+
+}
+
+void PbMonitor::saveRequestCount() {
+
+  numRequests_str = (String) _numRequests;
+
+  const char * updatedCount_str = fileInfo_str.c_str();
+
+  Serial.printf("All-time total requests: %s\n", updatedCount_str);
+
+  // deleting the file is an EASY way to overwrite the existing file
+  deleteFile(SD, WIFI_REQUEST_TOTAL_FILENAME);
+
+  // write the pre-incremented client count converted to strintg to the file
+  writeFile(SD, WIFI_REQUEST_TOTAL_FILENAME, updatedCount_str);
+
+}
 
 
 void PbMonitor::checkForTouch() {

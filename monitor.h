@@ -26,9 +26,9 @@ class PbMonitor
   public:
     PbMonitor() {};
     bool begin();
-    void captivePortal();
     void checkForTouch();
-    void checkForWiFiClient();
+    void serverCaptivePortal();
+    void serveWiFiClient();
 
   protected:
     Ammeter             _ammeter;
@@ -44,6 +44,7 @@ class PbMonitor
     int _oldcolor;
     int _lastBox_x;
     int _lastBox_y;
+    int _numRequests = 0;
 
     void hideGrid();
     void showGrid();
@@ -55,6 +56,9 @@ class PbMonitor
     void setupTFT();
     void setupTS();
     bool setupWifi();
+
+    void readRequestCount();
+    void saveRequestCount(int requestCount);
 
     void fingerPaint(int x, int y);
 
